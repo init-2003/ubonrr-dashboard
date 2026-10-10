@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get("year");
     const year = yearParam ? parseInt(yearParam, 10) : 2026;
+    const forceRefresh = searchParams.get("refresh") === "true";
 
-    const salesResult = await fetchSalesDashboard(year);
+    const salesResult = await fetchSalesDashboard(year, forceRefresh);
 
     const rawData = salesResult.data;
 

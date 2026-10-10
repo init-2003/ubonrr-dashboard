@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
 
     const year = yearParam ? parseInt(yearParam, 10) : 2026;
     const month = monthParam && monthParam !== "all" ? parseInt(monthParam, 10) : null;
+    const forceRefresh = searchParams.get("refresh") === "true";
 
-    const result = await fetchOperatingExpenses(year, month);
+    const result = await fetchOperatingExpenses(year, month, forceRefresh);
     const data = result.data;
 
     const totalOperatingExpenses = data.reduce(

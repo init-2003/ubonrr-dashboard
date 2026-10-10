@@ -143,7 +143,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/dashboard?year=${selectedYear}`);
+      const res = await fetch(`/api/dashboard?year=${selectedYear}&refresh=true`);
       if (res.ok) {
         const data: DashboardApiResponse = await res.json();
         setDashboardData(data);
@@ -168,6 +168,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     // Only fetch /api/dashboard for Overview (/ or /overview) and Data Table (/table)
     const isOverviewOrTable = pathname === "/" || pathname === "/overview" || pathname === "/table";
     if (!isOverviewOrTable) {
+      return;
+    }
+
+    // If data is already loaded for the selectedYear, skip re-fetching on simple tab switches
+    if (dashboardData && dashboardData.year === selectedYear) {
       return;
     }
 
