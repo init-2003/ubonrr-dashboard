@@ -21,7 +21,7 @@ import {
 } from "@/lib/utils";
 
 export default function RevenuePage() {
-  const { selectedYear, selectedMonth } = useDashboard();
+  const { selectedYear } = useDashboard();
   const [wholesaleData, setWholesaleData] = React.useState<WholesaleRevenueApiResponse | null>(null);
   const [retailData, setRetailData] = React.useState<RetailRevenueApiResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
@@ -103,12 +103,9 @@ export default function RevenuePage() {
       };
     });
 
-    const isMonthFiltered = selectedMonth !== null && selectedMonth >= 1 && selectedMonth <= 12;
-    const targetMonth = isMonthFiltered ? monthly[selectedMonth - 1] : null;
-
-    const activeWholesale = targetMonth ? targetMonth.WholesaleRevenue : totalWholesale;
-    const activeRetail = targetMonth ? targetMonth.RetailRevenue : totalRetail;
-    const activeTotal = activeWholesale + activeRetail;
+    const activeWholesale = totalWholesale;
+    const activeRetail = totalRetail;
+    const activeTotal = totalRevenue;
 
     const summaryObj: ExecutiveKPISummary = {
       totalRevenue: activeTotal,
@@ -129,10 +126,10 @@ export default function RevenuePage() {
     };
 
     return { monthlyData: monthly, summary: summaryObj };
-  }, [wholesaleData, retailData, selectedYear, selectedMonth]);
+  }, [wholesaleData, retailData, selectedYear]);
 
   if (isLoading && !wholesaleData && !retailData) {
-    return <RevenueSkeleton selectedMonth={selectedMonth} selectedYear={selectedYear} />;
+    return <RevenueSkeleton selectedYear={selectedYear} />;
   }
 
   if (error && !wholesaleData && !retailData) {
@@ -176,9 +173,7 @@ export default function RevenuePage() {
               {formatCurrency(summary.totalRevenue)}
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
-              {selectedMonth && selectedMonth >= 1 && selectedMonth <= 12
-                ? `ประจำเดือน ${MONTH_FULL_NAMES_TH[selectedMonth - 1]} ปี ${selectedYear}`
-                : `ปี ${selectedYear} (รวมขายส่ง + ขายปลีก)`}
+              ปี {selectedYear} (รวมขายส่ง + ขายปลีกตลอดทั้งปี)
             </p>
           </CardContent>
         </Card>
@@ -197,7 +192,7 @@ export default function RevenuePage() {
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
               สัดส่วน <span className="font-bold text-slate-800 dark:text-slate-200">{formatPercent(summary.wholesalePercent)}</span>{" "}
-              {selectedMonth ? "ของรายได้เดือนนี้" : "ของรายได้รวม"}
+              ของรายได้รวมทั้งปี
             </p>
           </CardContent>
         </Card>
@@ -216,7 +211,7 @@ export default function RevenuePage() {
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
               สัดส่วน <span className="font-bold text-slate-800 dark:text-slate-200">{formatPercent(summary.retailPercent)}</span>{" "}
-              {selectedMonth ? "ของรายได้เดือนนี้" : "ของรายได้รวม"}
+              ของรายได้รวมทั้งปี
             </p>
           </CardContent>
         </Card>
@@ -227,7 +222,6 @@ export default function RevenuePage() {
         <RevenueSplitChart
           data={monthlyData}
           summary={summary}
-          selectedMonth={selectedMonth}
           selectedYear={selectedYear}
         />
       </div>

@@ -34,7 +34,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Read initial query params from URL
   const initialYear = parseInt(searchParams.get("year") || "2026", 10) || 2026;
   const initialMonthParam = searchParams.get("month");
-  const initialMonth = initialMonthParam ? parseInt(initialMonthParam, 10) : null;
+  const isMonthSupportedInitial = pathname === "/sankey" || pathname === "/expenses";
+  const initialMonth = (isMonthSupportedInitial && initialMonthParam) ? parseInt(initialMonthParam, 10) : null;
 
   const [selectedYear, setSelectedYear] = React.useState<number>(initialYear);
   const [selectedMonth, setSelectedMonth] = React.useState<number | null>(initialMonth);
@@ -130,8 +131,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
+      const isMonthSupported = window.location.pathname === "/sankey" || window.location.pathname === "/expenses";
       const urlYear = parseInt(params.get("year") || "2026", 10) || 2026;
-      const urlMonth = params.get("month") ? parseInt(params.get("month")!, 10) : null;
+      const urlMonth = (isMonthSupported && params.get("month")) ? parseInt(params.get("month")!, 10) : null;
 
       setSelectedYear(urlYear);
       setSelectedMonth(urlMonth);
@@ -144,16 +146,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Automatically clean up ?month= from URL for pages that show yearly data (overview, revenue, table)
   React.useEffect(() => {
     const isMonthSupported = pathname === "/sankey" || pathname === "/expenses";
-    if (!isMonthSupported && typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("month")) {
+    if (!isMonthSupported) {
+      if (searchParams.has("month")) {
+        const params = new URLSearchParams(searchParams.toString());
         params.delete("month");
         const qs = params.toString();
         const cleanUrl = qs ? `${pathname}?${qs}` : pathname;
-        window.history.replaceState(null, "", cleanUrl);
+        router.replace(cleanUrl, { scroll: false });
       }
     }
-  }, [pathname]);
+  }, [pathname, searchParams, router]);
 
   // Fetch Dashboard Data manually
   const loadDashboard = React.useCallback(async () => {
