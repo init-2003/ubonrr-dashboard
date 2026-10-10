@@ -7,8 +7,12 @@ import { DashboardApiResponse } from "@/lib/types";
 
 interface DashboardContextType {
   selectedYear: number;
-  selectedMonth: number | null;
   setYear: (year: number) => void;
+  sankeyMonth: number | null;
+  setSankeyMonth: (month: number | null) => void;
+  expensesMonth: number | null;
+  setExpensesMonth: (month: number | null) => void;
+  selectedMonth: number | null;
   setMonth: (month: number | null) => void;
   dashboardData: DashboardApiResponse | null;
   isLoading: boolean;
@@ -34,11 +38,17 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Read initial query params from URL
   const initialYear = parseInt(searchParams.get("year") || "2026", 10) || 2026;
   const initialMonthParam = searchParams.get("month");
-  const isMonthSupportedInitial = pathname === "/sankey" || pathname === "/expenses";
-  const initialMonth = (isMonthSupportedInitial && initialMonthParam) ? parseInt(initialMonthParam, 10) : null;
+  const initialMonthVal = initialMonthParam ? parseInt(initialMonthParam, 10) : null;
 
   const [selectedYear, setSelectedYear] = React.useState<number>(initialYear);
-  const [selectedMonth, setSelectedMonth] = React.useState<number | null>(initialMonth);
+  // Separate, independent month states for Sankey and Expenses
+  const [sankeyMonth, setSankeyMonthState] = React.useState<number | null>(() => {
+    return pathname === "/sankey" ? initialMonthVal : null;
+  });
+  const [expensesMonth, setExpensesMonthState] = React.useState<number | null>(() => {
+    return pathname === "/expenses" ? initialMonthVal : null;
+  });
+
   const [dashboardData, setDashboardData] = React.useState<DashboardApiResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -78,32 +88,60 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Sync state with URL without full page reloads
-  const updateUrl = React.useCallback(
-    (year: number, month: number | null) => {
-      const params = new URLSearchParams();
-      if (year !== 2026) params.set("year", year.toString());
-      
-      const isMonthSupported = pathname === "/sankey" || pathname === "/expenses";
-      if (month !== null && isMonthSupported) {
-        params.set("month", month.toString());
+  const setSankeyMonth = React.useCallback(
+    (month: number | null) => {
+      setSankeyMonthState(month);
+      if (pathname === "/sankey") {
+        const params = new URLSearchParams();
+        if (selectedYear !== 2026) params.set("year", selectedYear.toString());
+        if (month !== null) params.set("month", month.toString());
+        const qs = params.toString();
+        const newUrl = qs ? `/sankey?${qs}` : `/sankey`;
+        window.history.pushState(null, "", newUrl);
       }
-
-      const qs = params.toString();
-      const newUrl = qs ? `${pathname}?${qs}` : pathname;
-      window.history.pushState(null, "", newUrl);
     },
-    [pathname]
+    [pathname, selectedYear]
+  );
+
+  const setExpensesMonth = React.useCallback(
+    (month: number | null) => {
+      setExpensesMonthState(month);
+      if (pathname === "/expenses") {
+        const params = new URLSearchParams();
+        if (selectedYear !== 2026) params.set("year", selectedYear.toString());
+        if (month !== null) params.set("month", month.toString());
+        const qs = params.toString();
+        const newUrl = qs ? `/expenses?${qs}` : `/expenses`;
+        window.history.pushState(null, "", newUrl);
+      }
+    },
+    [pathname, selectedYear]
+  );
+
+  const selectedMonth = pathname === "/sankey" ? sankeyMonth : pathname === "/expenses" ? expensesMonth : null;
+
+  const setMonth = React.useCallback(
+    (month: number | null) => {
+      if (pathname === "/sankey") {
+        setSankeyMonth(month);
+      } else if (pathname === "/expenses") {
+        setExpensesMonth(month);
+      }
+    },
+    [pathname, setSankeyMonth, setExpensesMonth]
   );
 
   const setYear = (year: number) => {
     setSelectedYear(year);
-    updateUrl(year, selectedMonth);
-  };
-
-  const setMonth = (month: number | null) => {
-    setSelectedMonth(month);
-    updateUrl(selectedYear, month);
+    const params = new URLSearchParams();
+    if (year !== 2026) params.set("year", year.toString());
+    const isSankey = pathname === "/sankey";
+    const isExpenses = pathname === "/expenses";
+    if (isSankey && sankeyMonth !== null) params.set("month", sankeyMonth.toString());
+    if (isExpenses && expensesMonth !== null) params.set("month", expensesMonth.toString());
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.pushState(null, "", newUrl);
   };
 
   const toggleSidebar = React.useCallback(() => {
@@ -131,17 +169,32 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const isMonthSupported = window.location.pathname === "/sankey" || window.location.pathname === "/expenses";
       const urlYear = parseInt(params.get("year") || "2026", 10) || 2026;
-      const urlMonth = (isMonthSupported && params.get("month")) ? parseInt(params.get("month")!, 10) : null;
+      const monthParam = params.get("month");
+      const urlMonth = monthParam ? parseInt(monthParam, 10) : null;
 
       setSelectedYear(urlYear);
-      setSelectedMonth(urlMonth);
+      if (window.location.pathname === "/sankey") {
+        setSankeyMonthState(urlMonth);
+      } else if (window.location.pathname === "/expenses") {
+        setExpensesMonthState(urlMonth);
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  // Sync state when URL search params change (e.g., direct navigation or router.push)
+  React.useEffect(() => {
+    const monthParam = searchParams.get("month");
+    const parsed = monthParam ? parseInt(monthParam, 10) : null;
+    if (pathname === "/sankey") {
+      setSankeyMonthState(parsed);
+    } else if (pathname === "/expenses") {
+      setExpensesMonthState(parsed);
+    }
+  }, [pathname, searchParams]);
 
   // Automatically clean up ?month= from URL for pages that show yearly data (overview, revenue, table)
   React.useEffect(() => {
@@ -281,7 +334,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Drilldown to Expenses with month
   const navigateToExpensesWithMonth = React.useCallback(
     (month: number) => {
-      setSelectedMonth(month);
+      setExpensesMonthState(month);
       const params = new URLSearchParams();
       if (selectedYear !== 2026) params.set("year", selectedYear.toString());
       params.set("month", month.toString());
@@ -293,8 +346,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const value: DashboardContextType = {
     selectedYear,
-    selectedMonth,
     setYear,
+    sankeyMonth,
+    setSankeyMonth,
+    expensesMonth,
+    setExpensesMonth,
+    selectedMonth,
     setMonth,
     dashboardData,
     isLoading,

@@ -30,6 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const {
     selectedYear,
     setYear,
+    sankeyMonth,
+    expensesMonth,
     selectedMonth,
     setMonth,
     dashboardData,
@@ -59,9 +61,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const params = new URLSearchParams();
     if (selectedYear !== 2026) params.set("year", selectedYear.toString());
     
-    // Only pass month query param to pages with monthly drilldowns (sankey, expenses)
-    if (selectedMonth !== null && (newTab === "sankey" || newTab === "expenses")) {
-      params.set("month", selectedMonth.toString());
+    // Each page keeps its own independent month state (do NOT sync between sankey and expenses!)
+    if (newTab === "sankey" && sankeyMonth !== null) {
+      params.set("month", sankeyMonth.toString());
+    } else if (newTab === "expenses" && expensesMonth !== null) {
+      params.set("month", expensesMonth.toString());
     }
 
     const qs = params.toString();
