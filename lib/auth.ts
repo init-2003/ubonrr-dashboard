@@ -119,11 +119,17 @@ export async function verifySessionToken(token: string): Promise<AuthUser | null
   }
 }
 
-export function getSessionCookieOptions(maxAge: number = SESSION_MAX_AGE) {
+export function getSessionCookieOptions(maxAge: number = SESSION_MAX_AGE, isSecure?: boolean) {
+  // Only set secure: true when explicitly requested or accessed over HTTPS,
+  // allowing HTTP intranet access (e.g. http://192.168.x.x:8083) to store cookies without browser rejection
+  const secure = isSecure !== undefined
+    ? isSecure
+    : process.env.COOKIE_SECURE === "true";
+
   return {
     name: COOKIE_NAME,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax" as const,
     path: "/",
     maxAge: maxAge,

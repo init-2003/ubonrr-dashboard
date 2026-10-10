@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookieOptions } from "@/lib/auth";
 
-export async function POST() {
-  const cookieOptions = getSessionCookieOptions(0);
+export async function POST(request: NextRequest) {
+  const proto = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
+  const isHttps = proto === "https" || proto === "https:";
+  const cookieOptions = getSessionCookieOptions(0, isHttps);
 
   const response = NextResponse.json({
     success: true,

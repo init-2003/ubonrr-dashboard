@@ -48,7 +48,9 @@ export async function POST(request: NextRequest) {
     // If rememberMe is checked, keep session for 30 days; otherwise 1 day
     const sessionMaxAge = Boolean(rememberMe) ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 1;
     const token = await createSessionToken(authUser, sessionMaxAge);
-    const cookieOptions = getSessionCookieOptions(sessionMaxAge);
+    const proto = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
+    const isHttps = proto === "https" || proto === "https:";
+    const cookieOptions = getSessionCookieOptions(sessionMaxAge, isHttps);
 
     const response = NextResponse.json<LoginApiResponse>({
       success: true,
