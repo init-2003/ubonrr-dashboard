@@ -58,7 +58,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const targetPath = TAB_TO_PATH[newTab] || "/overview";
     const params = new URLSearchParams();
     if (selectedYear !== 2026) params.set("year", selectedYear.toString());
-    if (selectedMonth !== null) params.set("month", selectedMonth.toString());
+    
+    // Only pass month query param to pages with monthly drilldowns (sankey, expenses)
+    if (selectedMonth !== null && (newTab === "sankey" || newTab === "expenses")) {
+      params.set("month", selectedMonth.toString());
+    }
+
     const qs = params.toString();
     const newUrl = qs ? `${targetPath}?${qs}` : targetPath;
     router.push(newUrl);

@@ -82,7 +82,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     (year: number, month: number | null) => {
       const params = new URLSearchParams();
       if (year !== 2026) params.set("year", year.toString());
-      if (month !== null) params.set("month", month.toString());
+      
+      const isMonthSupported = pathname === "/sankey" || pathname === "/expenses";
+      if (month !== null && isMonthSupported) {
+        params.set("month", month.toString());
+      }
 
       const qs = params.toString();
       const newUrl = qs ? `${pathname}?${qs}` : pathname;
@@ -136,6 +140,20 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  // Automatically clean up ?month= from URL for pages that show yearly data (overview, revenue, table)
+  React.useEffect(() => {
+    const isMonthSupported = pathname === "/sankey" || pathname === "/expenses";
+    if (!isMonthSupported && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("month")) {
+        params.delete("month");
+        const qs = params.toString();
+        const cleanUrl = qs ? `${pathname}?${qs}` : pathname;
+        window.history.replaceState(null, "", cleanUrl);
+      }
+    }
+  }, [pathname]);
 
   // Fetch Dashboard Data manually
   const loadDashboard = React.useCallback(async () => {
